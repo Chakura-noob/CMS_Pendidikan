@@ -1,0 +1,100 @@
+{
+  "app_name": "Nusantara SMP E-Learning & CMS Prototype",
+  "context": "Mobile/Web App / Educational LMS CMS for Junior High School",
+  "theme": "Light-preferred clean academic dashboard with vibrant primary indigo and warm slate neutrals (Archetype 6 / Modern Academic)",
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "weights": {
+      "light": "300",
+      "normal": "400",
+      "medium": "500",
+      "semibold": "600",
+      "bold": "700",
+      "black": "800"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-extrabold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-slate-600"
+    }
+  },
+  "colors": {
+    "primary": "#4F46E5",
+    "primary_hover": "#4338CA",
+    "accent": "#06B6D4",
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "card_bg": "#FFFFFF",
+    "border": "#E2E8F0",
+    "text_main": "#0F172A",
+    "text_muted": "#64748B",
+    "success": "#10B981",
+    "warning": "#F59E0B",
+    "danger": "#EF4444",
+    "forbidden_check": "Passed - no #7351B7 or #1B93A4 used"
+  },
+  "surface_strategies": {
+    "header": "Crystal Glass backdrop-blur-xl bg-white/80 border-b border-slate-200 sticky z-50",
+    "card": "Flat background with subtle 1px border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow",
+    "sidebar": "Solid white or subtle slate-50 border-r border-slate-200"
+  },
+  "grids": {
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+    "tetris_grid": "grid grid-cols-1 md:grid-cols-12 gap-8"
+  },
+  "motion": {
+    "transition_standard": "transition-all duration-200 ease-in-out",
+    "hover_lift": "hover:-translate-y-0.5 transition-transform duration-200"
+  },
+  "accessibility": {
+    "apca_contrast": "Checked - text meets > 4.5:1 ratio",
+    "focus_states": "focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+  },
+  "image_urls": [
+    {
+      "category": "hero_classroom",
+      "description": "Students in classroom with teacher presenting",
+      "url": "https://images.unsplash.com/photo-1509062522246-3755977927d7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxzY2hvb2wlMjBzdHVkZW50JTIwY2xhc3Nyb29tJTIwbW9kZXJuJTIwZWR1Y2F0aW9ufGVufDB8fHx8MTc4OTM1NjQzM3ww&ixlib=rb-4.1.0&q=85"
+    }
+  ],
+  "roles_included": [
+    "Admin (Master Data management, users, academic periods, subjects, classes, assignments)",
+    "Teacher (Course materials upload, homework assignment, grading, Zoom/Meet external links)",
+    "Student (Enrolled classes, lesson materials, online meeting join buttons, assignment submission, grades & feedback)"
+  ],
+  "demo_accounts": [
+    {
+      "role": "admin",
+      "email": "admin@nusantarasmp.sch.id",
+      "name": "Drs. Budi Santoso, M.Pd"
+    },
+    {
+      "role": "teacher",
+      "email": "teacher@nusantarasmp.sch.id",
+      "name": "Siti Rahma, S.Pd"
+    },
+    {
+      "role": "student",
+      "email": "student@nusantarasmp.sch.id",
+      "name": "Ahmad Pratama"
+    }
+  ],
+  "key_features": [
+    "Authentication with role-based switcher and demo accounts",
+    "Admin Master Data management (Classes, Subjects, Academic Periods, Teachers, Students, Teaching Assignments)",
+    "Teacher Dashboard with upload course materials, create assignments, grading, and Zoom/Google Meet external links",
+    "Student Dashboard with course viewing, material downloads, assignment uploads, live session join buttons opening in new tab",
+    "Local prototype storage with persistence and validation for uploads"
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Ensure all interactive elements have data-testid attributes",
+    "Never use universal transition: all",
+    "Use sonner for toasts",
+    "Use Shadcn UI components for dialogs, tables, tabs, select, dropdowns",
+    "Ensure crystal clear typography and generous spacing"
+  ]
+}
