@@ -20,8 +20,12 @@ Build a functional, visually polished Junior High School (SMP) Educational Conte
 - Teacher dashboard with assigned classes, review activity, active period, and stats.
 - Student dashboard with class context, attendance, subjects, upcoming work, and external meeting join link.
 - Responsive sidebar/topbar visual system based on the supplied blueprint direction.
+- Teacher material upload with local validated storage, publication status, and protected student download endpoint.
+- Multiple-choice quiz creation, answer-key protection, automatic student scoring, and completion result.
+- File assignment creation/submission, teacher grading with feedback, and 60/40 quiz-assignment final score calculation.
+- Role-specific unread notification inboxes for materials, assignments, submissions, PJJ, and grades.
 
 ## Backlog
-- P0: complete teacher content creation, quiz attempts, assignment submissions, grading, and attendance writes.
-- P1: profile pages, notification read states, upload validation/storage, and Excel export.
+- P0: complete attendance writes and PJJ management workflows.
+- P1: profile pages, notification read actions, and Excel export.
 - P2: edit/deactivate flows, richer subject detail pages, and migration-ready SQL schema documentation.
