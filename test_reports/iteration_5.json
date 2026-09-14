@@ -1,0 +1,58 @@
+{
+  "summary": "End-to-end verification after FeatureOverlay removal. Backend: 16/16 pytest tests pass, including new coverage for attendance record + student summary, PJJ create, real .xlsx export (validated as ZIP with column headers), single-active-period constraint, notification mark-read, and student 403 boundaries across admin + teacher endpoints. Frontend: FeatureOverlay.js confirmed deleted and not referenced from index.js or bundle. All previously flagged flows now work via real React state: teacher-success-message + grade-feedback render after grading, .xlsx download fires, student assignment-persistent-status renders from submissions state, notification mark-read reduces unread count from 4->3, attendance-success-message and pjj-success-message both render. Student quiz submit/score, download materials, PJJ join, attendance percent all functional. Admin can activate periods (single-active enforced backend-side).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminList (Academic periods)",
+        "issue": "Row main title renders 'undefined · undefined' because periods have no name/title/teacher fields; the fallback expression x.name || x.title || `${x.teacher} · ${x.class_name}` never falls through to year/semester. Only the sublabel shows the correct '2026/2027 · Ganjil'. Recommend adding `${x.year} · ${x.semester}` to the fallback chain for periods.",
+        "selector": "[data-testid^=record-row-]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "StudentAssignments assignment-persistent-status",
+        "issue": "Persistent status shows only 'Submitted · <file> · Submitted' after a fresh grade because the student view auto-selects data.tasks?.[0], which is the seeded assignment, not the newly-graded TEST assignment. If the selected assignment matches, Final score/Feedback render correctly; if the student clicks another task in the list there is no way to change 'selected'. Consider making each task row selectable so the status card follows the tapped assignment.",
+        "selector": "[data-testid=assignment-persistent-status]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Student Subjects quiz options",
+        "issues": ["React dev warning: <span> injected inside <option> causes 'In HTML, %s cannot be a child of' hydration warning. Source is likely dev-time instrumentation on option children (`{String.fromCharCode(65+j)} · {o}` split); harmless in production but noisy in devtools."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_requested_features.py",
+    "/app/backend/tests/test_iteration5_features.py",
+    "/app/test_reports/pytest/pytest_results_iteration5.xml"
+  ],
+  "action_items": [
+    "Fix AdminList period title fallback to include `${x.year} · ${x.semester}` so Academic periods stop rendering 'undefined · undefined'.",
+    "Optional: allow the student Assignments page to change the selected task so assignment-persistent-status can reflect the just-graded submission for any assignment, not only tasks[0]."
+  ],
+  "critical_code_review_comments": [
+    "AdminList row title expression `x.name || x.title || `${x.teacher} · ${x.class_name}`` produces 'undefined · undefined' for periods and should have a period-specific branch.",
+    "App.js is 1067 lines with Admin/Teacher/Student workspaces and modals all in one file; consider splitting by role for maintainability (>700 line guideline).",
+    "TeacherGradeReports.grade() defaults feedback to a hardcoded encouragement string when empty — this silently overwrites the teacher's intent-to-blank feedback; consider allowing empty feedback.",
+    "Student StudentAssignments uses local mySubs state seeded from data.submissions, but refresh() reloads dashboard; there is a brief window where the recently-submitted row could be duplicated if the server returns a different id — currently mitigated by assignment_id filter but relies on that guarantee."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iteration5_features.py",
+    "/app/test_reports/iteration_5.json"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "95% (all requested flows pass; one Admin display bug remains)"},
+  "test_credentials": "admin/admin123, guru.budi/password, siswa.budi/password (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created TEST_ prefixed quiz, assignment, attendance session, PJJ session, and Academic periods through the API/UI flows. Did not modify seeded production rows.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "FeatureOverlay is fully gone; do NOT reintroduce DOM MutationObserver hacks. All new backend endpoints (POST /teacher/attendance, POST /teacher/pjj, GET /teacher/grades/export) have coverage in test_iteration5_features.py. Only outstanding UI defect is the AdminList period title fallback showing 'undefined · undefined'. Note: pytest.ini pins -n 2 --dist loadscope; run with REACT_APP_BACKEND_URL exported. Grading formula is 0.6*quiz + 0.4*assignment (verified: 100 quiz + 85 assignment = 94 final).",
+  "rca of the issue": "N/A — previously reported iteration_4 issues (grade success rendering, assignment persistent status) are fixed via proper React state (savedFeedback + message in TeacherGradeReports; mySubs in StudentAssignments). No MutationObserver code remains."
+}

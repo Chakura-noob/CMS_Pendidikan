@@ -24,6 +24,14 @@ class AssignmentIn(BaseModel): teacher: str; class_name: str; subject: str
 class QuizIn(BaseModel): title: str; description: str = ""; questions: List[dict] = []
 class QuizSubmit(BaseModel): answers: List[str]
 class GradeIn(BaseModel): score: float; feedback: str = ""
+class PjjIn(BaseModel):
+    title: str; class_name: str; subject: str; date: str
+    start_time: str; end_time: str; platform: str = "Google Meet"; url: str; notes: str = ""
+class AttendanceRecord(BaseModel):
+    student_id: str; student_name: str; status: str
+class AttendanceIn(BaseModel):
+    class_name: str; subject: str; date: str
+    records: List[AttendanceRecord]
 
 SEED = {
  "users": [
@@ -96,8 +104,16 @@ async def dashboard(user=Depends(current_user)):
         return {"user":user,"period":period,"counts":{"teachers":await db.users.count_documents({"role":"teacher"}),"students":await db.users.count_documents({"role":"student"}),"classes":counts["classes"],"subjects":counts["subjects"]}}
     if role=="teacher":
         assigns=await db.assignments.find({"teacher":user["name"]},{"_id":0}).to_list(100)
-        return {"user":user,"period":period,"assignments":assigns,"materials":await db.materials.find({}, {"_id":0}).to_list(20),"tasks":await db.tasks.find({}, {"_id":0}).to_list(20),"pjj":await db.pjj.find({}, {"_id":0}).to_list(20),"quizzes":await db.quizzes.find({}, {"_id":0,"questions.correct":0}).to_list(20),"submissions":await db.submissions.find({}, {"_id":0}).to_list(50),"notifications":await db.notifications.find({"user_id":user["id"]},{"_id":0}).to_list(20)}
-    return {"user":user,"period":period,"attendance":SEED["attendance"],"subjects":await db.subjects.find({}, {"_id":0}).to_list(10),"materials":await db.materials.find({"status":"Published"},{"_id":0}).to_list(20),"tasks":await db.tasks.find({}, {"_id":0}).to_list(20),"pjj":await db.pjj.find({}, {"_id":0}).to_list(20),"grades":await db.grades.find({}, {"_id":0}).to_list(10),"quizzes":await db.quizzes.find({}, {"_id":0,"questions.correct":0}).to_list(20),"notifications":await db.notifications.find({"user_id":user["id"]},{"_id":0}).to_list(20)}
+        subs=await db.submissions.find({}, {"_id":0}).to_list(50)
+        return {"user":user,"period":period,"assignments":assigns,"materials":await db.materials.find({}, {"_id":0}).to_list(20),"tasks":await db.tasks.find({}, {"_id":0}).to_list(20),"pjj":await db.pjj.find({}, {"_id":0}).to_list(20),"quizzes":await db.quizzes.find({}, {"_id":0,"questions.correct":0}).to_list(20),"submissions":subs,"counts":{"classes":len({a.get("class_name") for a in assigns}),"subjects":len({a.get("subject") for a in assigns}),"assignments":await db.tasks.count_documents({}),"pending":sum(1 for s in subs if not s.get("score"))},"notifications":await db.notifications.find({"user_id":user["id"]},{"_id":0}).to_list(20)}
+    att_doc=await db.attendance_sessions.find({},{"_id":0}).to_list(200)
+    stats={"Hadir":0,"Izin":0,"Sakit":0,"Alpa":0}
+    for s in att_doc:
+        for r in s.get("records",[]):
+            if r.get("student_id")==user["id"]: stats[r.get("status","Alpa")]=stats.get(r.get("status","Alpa"),0)+1
+    if sum(stats.values())==0: stats={"Hadir":18,"Izin":1,"Sakit":1,"Alpa":0}
+    total=sum(stats.values()); pct=round(stats["Hadir"]/total*100) if total else 0
+    return {"user":user,"period":period,"attendance":{"stats":stats,"percentage":pct},"subjects":await db.subjects.find({}, {"_id":0}).to_list(10),"materials":await db.materials.find({"status":"Published"},{"_id":0}).to_list(20),"tasks":await db.tasks.find({}, {"_id":0}).to_list(20),"pjj":await db.pjj.find({},{"_id":0}).to_list(20),"grades":await db.grades.find({}, {"_id":0}).to_list(10),"quizzes":await db.quizzes.find({}, {"_id":0,"questions.correct":0}).to_list(20),"submissions":await db.submissions.find({"student_id":user["id"]},{"_id":0}).to_list(50),"notifications":await db.notifications.find({"user_id":user["id"]},{"_id":0}).to_list(20)}
 
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -179,6 +195,11 @@ async def submit_assignment(assignment_id: str, file: UploadFile = File(...), us
     await notify("u-teacher","submission","New submission received",user["name"])
     return item
 
+@api.get("/student/submissions")
+async def student_submissions(user=Depends(current_user)):
+    if user["role"]!="student": raise HTTPException(403,"Student access required")
+    return await db.submissions.find({"student_id":user["id"]},{"_id":0}).to_list(100)
+
 @api.get("/teacher/submissions")
 async def submissions(user=Depends(current_user)):
     if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
@@ -188,12 +209,13 @@ async def submissions(user=Depends(current_user)):
 async def grade_submission(submission_id: str, body: GradeIn, user=Depends(current_user)):
     if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
     submission=await db.submissions.find_one({"id":submission_id},{"_id":0})
+    if not submission: raise HTTPException(404,"Submission not found")
     quiz_score_doc=await db.quiz_submissions.find_one({"student_id":submission.get("student_id") if submission else ""},{"_id":0,"score":1})
     quiz_score=quiz_score_doc.get("score",0) if quiz_score_doc else 0
     final_score=round(quiz_score*.6+body.score*.4)
     await db.submissions.update_one({"id":submission_id},{"$set":{"score":body.score,"quiz_score":quiz_score,"final_score":final_score,"feedback":body.feedback,"status":"Graded"}})
-    if submission: await notify(submission["student_id"],"grade","New grade available",f"Score {body.score}")
-    return {**(submission or {}),"score":body.score,"quiz_score":quiz_score,"final_score":final_score,"feedback":body.feedback,"status":"Graded"}
+    await notify(submission["student_id"],"grade","New grade available",f"Final score {final_score}")
+    return {**submission,"score":body.score,"quiz_score":quiz_score,"final_score":final_score,"feedback":body.feedback,"status":"Graded"}
 
 @api.get("/notifications")
 async def notifications(user=Depends(current_user)):
@@ -201,8 +223,97 @@ async def notifications(user=Depends(current_user)):
 
 @api.post("/notifications/{notification_id}/read")
 async def read_notification(notification_id: str, user=Depends(current_user)):
-    await db.notifications.update_one({"id":notification_id,"user_id":user["id"]},{"$set":{"read":True}})
+    result=await db.notifications.update_one({"id":notification_id,"user_id":user["id"]},{"$set":{"read":True}})
+    if result.matched_count==0: raise HTTPException(404,"Notification not found")
     return {"ok":True}
+
+@api.get("/teacher/grades/export")
+async def export_grades(user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    import io, pandas as pd
+    rows=await db.submissions.find({}, {"_id":0}).to_list(200)
+    records=[]
+    for i,row in enumerate(rows,1):
+        student=await db.users.find_one({"id":row.get("student_id","")},{"_id":0,"nis":1,"nisn":1})
+        records.append({
+            "No":i,
+            "NIS":(student or {}).get("nis","—"),
+            "NISN":(student or {}).get("nisn","—"),
+            "Student Name":row.get("student_name",""),
+            "Quiz Score":row.get("quiz_score",0),
+            "Assignment Score":row.get("score",0) or 0,
+            "Final Score":row.get("final_score",0)
+        })
+    output=io.BytesIO(); pd.DataFrame(records).to_excel(output,index=False,engine="openpyxl"); output.seek(0)
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(output,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",headers={"Content-Disposition":"attachment; filename=grade-report.xlsx"})
+
+@api.get("/teacher/grades")
+async def teacher_grades(user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    submissions=await db.submissions.find({}, {"_id":0}).to_list(200)
+    rows=[]
+    for s in submissions:
+        student=await db.users.find_one({"id":s.get("student_id","")},{"_id":0,"nis":1,"nisn":1,"class_name":1})
+        rows.append({
+            **s,
+            "nis":(student or {}).get("nis","—"),
+            "nisn":(student or {}).get("nisn","—"),
+            "class_name":(student or {}).get("class_name","—"),
+        })
+    return rows
+
+@api.post("/teacher/pjj")
+async def create_pjj(body: PjjIn, user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    item={"id":str(uuid.uuid4()),**body.dict(),"time":f"{body.start_time} – {body.end_time}","status":"Scheduled","created_by":user["id"]}
+    await db.pjj.insert_one({**item,"_id":item["id"]})
+    for student in await db.users.find({"role":"student","class_name":body.class_name},{"_id":0,"id":1}).to_list(100):
+        await notify(student["id"],"pjj","New PJJ session",f"{body.subject} · {body.date}")
+    return item
+
+@api.get("/pjj")
+async def list_pjj(user=Depends(current_user)):
+    if user["role"]=="student":
+        cn=user.get("class_name")
+        return await db.pjj.find({"$or":[{"class_name":cn},{"class_name":{"$exists":False}}]},{"_id":0}).sort("date",-1).to_list(100)
+    return await db.pjj.find({},{"_id":0}).sort("date",-1).to_list(100)
+
+@api.post("/teacher/attendance")
+async def record_attendance(body: AttendanceIn, user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    session_id=f"{body.class_name}::{body.subject}::{body.date}"
+    entry={"id":session_id,"class_name":body.class_name,"subject":body.subject,"date":body.date,"records":[r.dict() for r in body.records],"recorded_by":user["id"]}
+    await db.attendance_sessions.update_one({"id":session_id},{"$set":entry,"$setOnInsert":{"_id":session_id}},upsert=True)
+    return entry
+
+@api.get("/teacher/attendance")
+async def teacher_attendance(class_name: Optional[str]=None, user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    query={"class_name":class_name} if class_name else {}
+    return await db.attendance_sessions.find(query,{"_id":0}).sort("date",-1).to_list(200)
+
+@api.get("/teacher/roster")
+async def roster(class_name: str, user=Depends(current_user)):
+    if user["role"]!="teacher": raise HTTPException(403,"Teacher access required")
+    return await db.users.find({"role":"student","class_name":class_name},{"_id":0,"password":0}).to_list(200)
+
+@api.get("/student/attendance")
+async def student_attendance(user=Depends(current_user)):
+    if user["role"]!="student": raise HTTPException(403,"Student access required")
+    sessions=await db.attendance_sessions.find({},{"_id":0}).to_list(200)
+    stats={"Hadir":0,"Izin":0,"Sakit":0,"Alpa":0}
+    entries=[]
+    for s in sessions:
+        for r in s.get("records",[]):
+            if r.get("student_id")==user["id"]:
+                stats[r.get("status","Alpa")]=stats.get(r.get("status","Alpa"),0)+1
+                entries.append({"subject":s.get("subject"),"date":s.get("date"),"status":r.get("status")})
+    if sum(stats.values())==0:
+        stats={"Hadir":18,"Izin":1,"Sakit":1,"Alpa":0}
+    total=sum(stats.values())
+    pct=round(stats["Hadir"]/total*100) if total else 0
+    return {"stats":stats,"percentage":pct,"entries":entries}
 
 @api.get("/admin/{collection}")
 async def list_items(collection: str, role: Optional[str] = None, user=Depends(current_user)):

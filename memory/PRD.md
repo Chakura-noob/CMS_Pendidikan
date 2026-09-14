@@ -1,31 +1,40 @@
-# Nusantara SMP E-Learning CMS Prototype
+# Nusantara SMP E-Learning CMS/LMS — PRD
 
 ## Original problem statement
-Build a functional, visually polished Junior High School (SMP) Educational Content Management System / Learning Management System with exactly Admin, Teacher, and Student roles, simple relational relationships, secure role-based authentication, realistic sample data, and responsive role-specific dashboards. Initial scope selected: authentication, admin master data, and role dashboards.
+Junior High School (SMP) E-Learning CMS/LMS prototype with three roles: Admin, Teacher, Student.
+No public registration. No custom video infrastructure. No parent accounts. Design must be easy to port later to Native PHP + MySQL + XAMPP.
 
-## Architecture decisions
-- React frontend with FastAPI API and MongoDB collections shaped like relational entities for easy PHP/MySQL migration.
-- JWT bearer sessions, bcrypt-compatible prototype password handling, and role checks on protected endpoints.
-- Seeded fictional school data; API reads only configured environment URLs and database values.
+## Tech stack
+- Backend: FastAPI + Motor (MongoDB) + JWT + pandas/openpyxl for Excel export
+- Frontend: React (CRA + Craco), lucide-react icons, axios
+- Auth: JWT stored in localStorage; role checked on every protected endpoint
 
-## Personas
-- Admin: manages academic periods and master data.
-- Teacher: sees assigned teaching workspace.
-- Student: sees a friendly learning dashboard for their class.
+## Core requirements (static)
+- Three roles: Admin, Teacher, Student. Only Admin creates users.
+- Academic Period: single active period at a time; historical periods retained.
+- Admin CRUD: periods, classes, subjects, teachers, students, teaching assignments.
+- Teacher: publish materials, build multiple-choice quizzes (server-scored), create file-submission assignments, grade with feedback (final = 0.6*quiz + 0.4*assignment), record attendance (Hadir/Izin/Sakit/Alpa), create PJJ sessions with external meeting URLs, export grades to real .xlsx.
+- Student: view active period, materials, take quizzes with auto scoring, submit files, see persistent submission status with final score/feedback, attendance summary, PJJ join links, notifications with mark-as-read.
 
-## Implemented (2026-03-12)
-- Role-based login for all three demo users; no registration.
-- Seeded active/inactive academic periods, classes, subjects, users, assignments, materials, tasks, attendance, PJJ, and grades.
-- Admin dashboard plus master-data views and add-record modal for academic periods, teachers, students, classes, subjects, and teaching assignments.
-- Teacher dashboard with assigned classes, review activity, active period, and stats.
-- Student dashboard with class context, attendance, subjects, upcoming work, and external meeting join link.
-- Responsive sidebar/topbar visual system based on the supplied blueprint direction.
-- Teacher material upload with local validated storage, publication status, and protected student download endpoint.
-- Multiple-choice quiz creation, answer-key protection, automatic student scoring, and completion result.
-- File assignment creation/submission, teacher grading with feedback, and 60/40 quiz-assignment final score calculation.
-- Role-specific unread notification inboxes for materials, assignments, submissions, PJJ, and grades.
+## User personas
+- **Admin (Drs. Budi Santoso)** — school administrator managing master data
+- **Teacher (Siti Rahma)** — classroom teacher for VIII-A / VIII-B Mathematics
+- **Student (Ahmad Pratama)** — VIII-A student
 
-## Backlog
-- P0: complete attendance writes and PJJ management workflows.
-- P1: profile pages, notification read actions, and Excel export.
-- P2: edit/deactivate flows, richer subject detail pages, and migration-ready SQL schema documentation.
+## What's been implemented (Feb 2026)
+- Authentication + role-based dashboards + sidebar/topbar with active period badge
+- Admin master-data CRUD for periods (with Activate button, single-active enforced), classes, subjects, teachers, students, teaching assignments
+- Teacher: My Classes with material upload / quiz builder (multi-question) / assignment create; Attendance recorder (class+subject+date+per-student status); Grade Reports with inline score+feedback and real .xlsx download; PJJ session creator; Profile
+- Student: Dashboard with attendance summary, subjects & materials list, quiz taking + auto score, assignment submission with persistent status showing final grade + feedback, PJJ list with join links, dedicated Attendance page, Profile
+- Notifications with in-app mark-as-read (real API, no DOM hacks)
+- Real xlsx export via pandas + openpyxl with columns: No, NIS, NISN, Student Name, Quiz Score, Assignment Score, Final Score
+
+## Testing status
+- iteration_5: backend 16/16 passing, frontend 95% (all requested flows). MEDIUM bug (period title fallback) fixed post-report.
+
+## Backlog / Next tasks
+- **P1** Split App.js (>1000 lines) into per-role folders for maintainability before PHP port
+- **P1** Add filters on Teacher Grade Reports (class + subject + academic period)
+- **P2** Support inline preview for PDF materials
+- **P2** Enable Admin to edit/deactivate teachers & students (current UI is create-only)
+- **P2** Attendance history table for teacher view

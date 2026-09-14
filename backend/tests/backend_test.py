@@ -51,7 +51,8 @@ def test_dashboard_by_role(client, tokens, role):
     elif role == "teacher":
         assert len(data["assignments"]) >= 1
     else:
-        assert data["attendance"][0]["label"] == "Hadir"
+        assert "Hadir" in data["attendance"]["stats"]
+        assert isinstance(data["attendance"]["percentage"], int)
         assert any(task["title"] == "Algebra Practice Set" for task in data["tasks"])
 
 
